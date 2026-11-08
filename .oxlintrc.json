@@ -387,7 +387,7 @@
       }
     },
     {
-      "files": ["**/*.test.{js,ts,jsx,tsx}", "packages/docs/**/*"],
+      "files": ["**/*.test.{js,ts,jsx,tsx}"],
       "rules": {
         "actual/no-untranslated-strings": "off",
         "actual/prefer-logger-over-console": "off",
@@ -409,12 +409,6 @@
       ],
       "rules": {
         "import/no-default-export": "off"
-      }
-    },
-    {
-      "files": ["packages/docs/**/*"],
-      "rules": {
-        "actual/no-anchor-tag": "off"
       }
     },
     {

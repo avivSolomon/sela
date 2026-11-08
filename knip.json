@@ -57,14 +57,6 @@
       "ignoreBinaries": ["bin/update-client"],
       "ignoreDependencies": ["better-sqlite3"]
     },
-    "packages/docs": {
-      "entry": [
-        "src/theme/**/*.{ts,tsx,js,jsx}",
-        "src/components/**/*.{ts,tsx,js,jsx}",
-        "docs/**/*.{js,jsx}"
-      ],
-      "ignore": ["docusaurus.netlify-config.js"]
-    },
     "packages/loot-core": {
       "entry": ["src/**/index-types.ts", "src/mocks/**"],
       "ignoreDependencies": [

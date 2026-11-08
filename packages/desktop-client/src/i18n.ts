@@ -10,7 +10,10 @@ export const availableLanguages = Platform.isPlaywright
   ? []
   : Object.keys(languages).map(path => path.split('/')[2].split('.')[0]);
 
-const isLanguageAvailable = (language: string) =>
+const DEFAULT_LANGUAGE = 'he';
+const RTL_LANGUAGES = new Set(['he', 'ar', 'fa']);
+
+const isLanguageAvailable =(language: string) =>
   Object.hasOwn(languages, `/locale/${language}.json`);
 
 const loadLanguage = (language: string) => {
@@ -63,10 +66,9 @@ const resolveLanguage = (language: string) => {
 };
 
 export const setI18NextLanguage = (language: string | null) => {
-  const defaultLanguages = Array.isArray(navigator.languages)
-    ? navigator.languages
-    : [navigator.language || 'en'];
-  const languagesToTry = language ? [language] : defaultLanguages;
+  // Sela is Hebrew-first: without an explicit choice, use Hebrew regardless
+  // of the browser language.
+  const languagesToTry = language ? [language] : [DEFAULT_LANGUAGE];
 
   let resolved: string | undefined;
 
@@ -84,6 +86,11 @@ export const setI18NextLanguage = (language: string | null) => {
     );
     resolved = 'en';
   }
+
+  document.documentElement.lang = resolved;
+  document.documentElement.dir = RTL_LANGUAGES.has(resolved.split('-')[0])
+    ? 'rtl'
+    : 'ltr';
 
   if (resolved === i18n.language) {
     return; // language is already set
