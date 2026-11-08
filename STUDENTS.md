@@ -41,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File .\start-sela.ps1
 
 ## שלב 4: להתרשם מהתוכנה
 
-1. במסך הפתיחה לחץ **Try the demo**. זה יוצר תקציב לדוגמה עם נתונים מוכנים.
+1. במסך הפתיחה לחץ **Start budgeting** כדי ליצור תקציב חדש ולהתחיל לעבוד.
 2. עבור בין המסכים בתפריט הצד: **Budget**, **Accounts**, **Reports**, **Schedules**.
 3. חפש בתפריט את מודול **המשכנתא** (Mortgage), שהוא התוספת הישראלית של סלע.
 

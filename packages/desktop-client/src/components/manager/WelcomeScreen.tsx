@@ -123,12 +123,6 @@ export function WelcomeScreen() {
         >
           <Trans>Start budgeting</Trans>
         </Button>
-        <Button
-          style={buttonStyle}
-          onPress={() => dispatch(createBudget({ testMode: true }))}
-        >
-          <Trans>Try the demo</Trans>
-        </Button>
         {!serverURL && (
           <Button
             style={buttonStyle}
