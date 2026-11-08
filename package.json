@@ -108,7 +108,7 @@
       "built": true
     },
     "sharp": {
-      "built": true
+      "built": false
     }
   },
   "optionalDependencies": {

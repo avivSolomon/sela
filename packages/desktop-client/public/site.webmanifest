@@ -1,7 +1,7 @@
 {
-  "name": "Actual",
-  "short_name": "Actual",
-  "description": "A local-first personal finance tool",
+  "name": "Sela",
+  "short_name": "Sela",
+  "description": "Sela - personal finance and mortgage planning",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

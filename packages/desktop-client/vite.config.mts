@@ -340,6 +340,9 @@ export default defineConfig(async ({ mode, command }) => {
         ? undefined
         : VitePWA({
             registerType: 'prompt',
+            // Sela does not ship a web manifest, so browsers never offer to
+            // install it as a separate app.
+            manifest: false,
             // TODO:  The plugin worker build is currently disabled due to issues with offline support. Fix this
             // strategies: 'injectManifest',
             // srcDir: 'service-worker',
