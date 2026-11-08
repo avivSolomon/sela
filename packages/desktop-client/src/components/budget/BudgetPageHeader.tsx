@@ -25,14 +25,14 @@ export const BudgetPageHeader = memo<BudgetPageHeaderProps>(
     return (
       <View
         style={{
-          marginLeft:
+          marginInlineStart:
             200 + 100 * categoryExpandedState + 5 - offsetMultipleMonths,
           flexShrink: 0,
         }}
       >
         <View
           style={{
-            marginRight: 5 + getScrollbarWidth() - offsetMultipleMonths,
+            marginInlineEnd: 5 + getScrollbarWidth() - offsetMultipleMonths,
           }}
         >
           <MonthPicker

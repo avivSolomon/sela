@@ -67,8 +67,8 @@ export const BudgetTotals = memo(function BudgetTotals({
         flexDirection: 'row',
         flexShrink: 0,
         boxShadow: styles.cardShadow,
-        marginLeft: 5,
-        marginRight: 5 + getScrollbarWidth(),
+        marginInlineStart: 5,
+        marginInlineEnd: 5 + getScrollbarWidth(),
         borderRadius: '4px 4px 0 0',
         borderBottom: '1px solid ' + theme.tableBorder,
         '& .hover-visible': {

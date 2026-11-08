@@ -53,7 +53,7 @@ export function Item({
       }}
     >
       <Icon width={15} height={15} />
-      <Block style={{ marginLeft: 8 }}>{title}</Block>
+      <Block style={{ marginInlineStart: 8 }}>{title}</Block>
       <View style={{ flex: 1 }} />
     </View>
   );
@@ -65,8 +65,8 @@ export function Item({
           ...styles.mediumText,
           paddingTop: 9,
           paddingBottom: 9,
-          paddingLeft: 19 + indent,
-          paddingRight: 10,
+          paddingInlineStart: 19 + indent,
+          paddingInlineEnd: 10,
           textDecoration: 'none',
           color: theme.sidebarItemText,
           ...(forceHover ? hoverStyle : {}),
@@ -75,7 +75,7 @@ export function Item({
         forceActive={forceActive}
         activeStyle={{
           borderLeft: '4px solid ' + theme.sidebarItemTextSelected,
-          paddingLeft: 19 + indent - 4,
+          paddingInlineStart: 19 + indent - 4,
           color: theme.sidebarItemTextSelected,
         }}
         to={to}

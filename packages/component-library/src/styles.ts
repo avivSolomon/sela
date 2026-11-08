@@ -94,6 +94,10 @@ export const styles: CSSProperties = {
     // ss01: Open digits
     // ss04: Disambiguation w/o zero
     fontFeatureSettings: '"tnum", "ss01", "ss04"',
+    // Keep the sign and digits in order inside right-to-left pages
+    // ("-12.00", not "12.00-").
+    direction: 'ltr',
+    unicodeBidi: 'isolate',
   },
   notFixed: { fontFeatureSettings: '' },
   text: {
