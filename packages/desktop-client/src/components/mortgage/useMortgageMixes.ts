@@ -13,6 +13,7 @@ import type {
 } from '@actual-app/core/shared/mortgage';
 
 import { useLocalPref } from '#hooks/useLocalPref';
+import { useSyncedPref } from '#hooks/useSyncedPref';
 
 type Draft = { mix: MortgageMix; savedId: string | null; name: string };
 
@@ -43,7 +44,9 @@ function newId(): string {
 export function useMortgageMixes() {
   const { t } = useTranslation();
   const [draftRaw, setDraftRaw] = useLocalPref('mortgage.draft');
-  const [savedRaw, setSavedRaw] = useLocalPref('mortgage.saved');
+  // The saved mixes live in the budget itself (so "Export data" includes
+  // them); only the draft stays in this browser.
+  const [savedRaw, setSavedRaw] = useSyncedPref('mortgage-saved-mixes');
 
   const saved = parseSavedMixes(savedRaw);
 

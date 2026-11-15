@@ -65,7 +65,10 @@ export type SyncedPrefs = Partial<
     | `flip-amount-${string}-${'csv' | 'qif'}`
     | `flags.${FeatureFlag}`
     | `learn-categories`
-    | `show-hidden-tags`,
+    | `show-hidden-tags`
+    // JSON array of the named mortgage mixes. Stored with the budget, so it
+    // is part of "Export data" backups.
+    | 'mortgage-saved-mixes',
     string
   >
 >;
@@ -108,8 +111,6 @@ export type LocalPrefs = Partial<{
   'mobile.bankSyncProvidersCollapsed': boolean;
   /** JSON of the mortgage mix being edited (survives page reloads). */
   'mortgage.draft': string;
-  /** JSON array of the named mortgage mixes the user saved. */
-  'mortgage.saved': string;
 }>;
 
 export type Theme = 'light' | 'dark' | 'auto' | 'midnight' | string;
