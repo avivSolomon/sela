@@ -140,12 +140,13 @@ export const deleteBudget = createAppAsyncThunk(
 type CreateBudgetPayload = {
   testMode?: boolean;
   demoMode?: boolean;
+  budgetName?: string;
 };
 
 export const createBudget = createAppAsyncThunk(
   `${sliceName}/createBudget`,
   async (
-    { testMode = false, demoMode = false }: CreateBudgetPayload,
+    { testMode = false, demoMode = false, budgetName }: CreateBudgetPayload,
     { dispatch },
   ) => {
     dispatch(
@@ -158,7 +159,7 @@ export const createBudget = createAppAsyncThunk(
     if (demoMode) {
       await send('create-demo-budget');
     } else {
-      await send('create-budget', { testMode });
+      await send('create-budget', { testMode, budgetName });
     }
 
     dispatch(closeModal());
