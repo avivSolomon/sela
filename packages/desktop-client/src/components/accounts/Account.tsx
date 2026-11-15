@@ -660,8 +660,9 @@ class AccountInternal extends PureComponent<
       accountName && accountName.replace(/[()]/g, '').replace(/\s+/g, '-');
     const filename = `${normalizedName || 'transactions'}.csv`;
 
+    // The BOM makes Excel read the CSV as UTF-8, so Hebrew displays correctly.
     void window.Actual.saveFile(
-      exportedTransactions,
+      '﻿' + exportedTransactions,
       filename,
       t('Export transactions'),
     );

@@ -47,16 +47,6 @@
       "ignore": ["playwright.config.d.ts"],
       "ignoreDependencies": ["plugins-service"]
     },
-    "packages/desktop-electron": {
-      "entry": [
-        "preload.ts",
-        "server.ts",
-        "afterSignHook.ts",
-        "beforePackHook.ts"
-      ],
-      "ignoreBinaries": ["bin/update-client"],
-      "ignoreDependencies": ["better-sqlite3"]
-    },
     "packages/loot-core": {
       "entry": ["src/**/index-types.ts", "src/mocks/**"],
       "ignoreDependencies": [
@@ -69,15 +59,6 @@
         "timers-browserify",
         "util"
       ]
-    },
-    "packages/mobile-client": {
-      "entry": ["bin/*"],
-      "ignore": [
-        "android/app/src/main/assets/**",
-        "ios/App/App/public/**",
-        "ios/DerivedData/**"
-      ],
-      "ignoreDependencies": ["@capacitor/splash-screen"]
     },
     "packages/plugins-service": {
       "entry": ["src/plugin-service-worker.ts"]

@@ -22,7 +22,8 @@ export function PageHeader({ title, style }: PageHeaderProps) {
         flexDirection: 'row',
         justifyContent: 'flex-start',
         alignItems: 'center',
-        marginLeft: 20,
+        // Logical margin: the gap is on the side next to the sidebar in RTL too.
+        marginInlineStart: 20,
         ...style,
       }}
     >

@@ -138,5 +138,20 @@ export async function exportQueryToCSV(query) {
     };
   });
 
-  return csvStringify(transactionsForExport, csvStringifyOptions);
+  // Listing the columns keeps the header row even when there are no
+  // transactions yet, so the exported file is never empty.
+  return csvStringify(transactionsForExport, {
+    ...csvStringifyOptions,
+    columns: [
+      'Account',
+      'Date',
+      'Payee',
+      'Notes',
+      'Category_Group',
+      'Category',
+      'Amount',
+      'Split_Amount',
+      'Cleared',
+    ],
+  });
 }
