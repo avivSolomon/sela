@@ -93,7 +93,10 @@ $builtStamp = if (Test-Path $stamp) { (Get-Content $stamp -Raw).Trim() } else { 
 $needsBuild = $Rebuild -or -not (Test-Path (Join-Path $buildDir 'index.html')) -or ($currentStamp -eq 'no-git' -and -not $builtStamp) -or ($currentStamp -ne 'no-git' -and $builtStamp -ne $currentStamp)
 
 if ($needsBuild) {
-  Write-Host "Building Sela (about 2-3 minutes, only when the code changed)..." -ForegroundColor Cyan
+  Write-Host "Building Sela (a few minutes, only when the code changed)..." -ForegroundColor Cyan
+  # No source maps, size report or bundle stats: they only slow a local build.
+  $env:SELA_LOCAL_BUILD = '1'
+  $env:VITE_CONFIG_NATIVE_IGNORE_WARNING = 'true'
   node $yarn workspace plugins-service build
   if ($LASTEXITCODE -ne 0) { Write-Host "Build failed (plugins-service)." -ForegroundColor Red; exit 1 }
   node $yarn workspace '@actual-app/web' build:browser

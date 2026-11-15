@@ -284,7 +284,10 @@ export default defineConfig(async ({ mode, command }) => {
     build: {
       minify: 'oxc',
       target: 'es2022',
-      sourcemap: true,
+      // start-sela.ps1 sets SELA_LOCAL_BUILD: a local build skips source maps
+      // and the gzip size report, which only slow the build down.
+      sourcemap: !process.env.SELA_LOCAL_BUILD,
+      reportCompressedSize: !process.env.SELA_LOCAL_BUILD,
       outDir: mode === 'desktop' ? 'build-electron' : 'build',
       assetsDir: 'static',
       manifest: true,
@@ -395,10 +398,12 @@ export default defineConfig(async ({ mode, command }) => {
         // n.b. Must be a string to ensure plugin resolution order. See https://github.com/actualbudget/actual/pull/5853
         presets: [reactCompilerPreset()],
       }),
-      visualizer({
-        template: 'raw-data',
-        filename: 'build-stats/web-stats.json',
-      }),
+      process.env.SELA_LOCAL_BUILD
+        ? undefined
+        : visualizer({
+            template: 'raw-data',
+            filename: 'build-stats/web-stats.json',
+          }),
       !!env.HTTPS && basicSsl(),
     ],
     test: {

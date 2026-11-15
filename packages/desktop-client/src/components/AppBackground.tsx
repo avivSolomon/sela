@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { animated, useTransition } from 'react-spring';
 
 import { Block } from '@actual-app/components/block';
@@ -16,6 +17,7 @@ type AppBackgroundProps = {
 };
 
 export function AppBackground({ isLoading }: AppBackgroundProps) {
+  const { t } = useTranslation();
   const loadingText = useSelector(state => state.app.loadingText);
   const showLoading = isLoading || loadingText !== null;
   const transitions = useTransition(loadingText, {
@@ -44,7 +46,9 @@ export function AppBackground({ isLoading }: AppBackgroundProps) {
               })}
             >
               <Block style={{ marginBottom: 20, fontSize: 18 }}>
-                {loadingText}
+                {/* The text is stored before the language loads, so it is
+                    translated again here once the strings are available. */}
+                {loadingText && t(loadingText)}
               </Block>
               <AnimatedLoading width={25} color={theme.pageText} />
             </View>

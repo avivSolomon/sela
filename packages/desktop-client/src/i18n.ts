@@ -13,7 +13,7 @@ export const availableLanguages = Platform.isPlaywright
 const DEFAULT_LANGUAGE = 'he';
 const RTL_LANGUAGES = new Set(['he', 'ar', 'fa']);
 
-const isLanguageAvailable =(language: string) =>
+const isLanguageAvailable = (language: string) =>
   Object.hasOwn(languages, `/locale/${language}.json`);
 
 const loadLanguage = (language: string) => {
@@ -27,7 +27,9 @@ void i18n
   .use(initReactI18next)
   .use(resourcesToBackend(loadLanguage))
   .init({
-    lng: 'en',
+    // Start in Hebrew so the Hebrew strings load first, instead of loading
+    // English and then switching (an extra download and English flashes).
+    lng: DEFAULT_LANGUAGE,
 
     // allow keys to be phrases having `:`, `.`
     nsSeparator: false,
