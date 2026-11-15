@@ -3,6 +3,8 @@ module.exports = {
   output: 'locale/$LOCALE.json',
   locales: ['en'],
   sort: true,
+  // en.json is regenerated on every build; no need for an en_old.json copy
+  createOldCatalogs: false,
   keySeparator: false,
   namespaceSeparator: false,
   defaultValue: (locale, ns, key, value) => {

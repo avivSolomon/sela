@@ -34,7 +34,11 @@ const languageOptions = (t: TFunction): SelectOption[] =>
 
 export function LanguageSettings() {
   const { t } = useTranslation();
-  const [language, setLanguage] = useGlobalPref('language');
+  // Reload once the choice is saved: texts already on screen (`<Trans>`) do
+  // not re-render by themselves when the language changes.
+  const [language, setLanguage] = useGlobalPref('language', () =>
+    window.location.reload(),
+  );
   const isEnabled = !!availableLanguages.length;
 
   return (
@@ -49,7 +53,7 @@ export function LanguageSettings() {
           }
           onChange={value => {
             setLanguage(value);
-            setI18NextLanguage(value);
+            void setI18NextLanguage(value);
           }}
           disabled={!isEnabled}
         />

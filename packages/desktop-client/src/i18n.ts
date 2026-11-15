@@ -29,7 +29,9 @@ void i18n
   .init({
     // Start in Hebrew so the Hebrew strings load first, instead of loading
     // English and then switching (an extra download and English flashes).
-    lng: DEFAULT_LANGUAGE,
+    // Unit tests render components on their own and expect the English
+    // source strings, so they keep starting in English.
+    lng: import.meta.env.MODE === 'test' ? 'en' : DEFAULT_LANGUAGE,
 
     // allow keys to be phrases having `:`, `.`
     nsSeparator: false,
@@ -67,7 +69,12 @@ const resolveLanguage = (language: string) => {
   return undefined;
 };
 
-export const setI18NextLanguage = (language: string | null) => {
+/**
+ * Switches the language. The returned promise resolves once its strings are
+ * loaded, so callers can wait before rendering (`<Trans>` elements do not
+ * re-render by themselves when the language changes later).
+ */
+export const setI18NextLanguage = (language: string | null): Promise<void> => {
   // Sela is Hebrew-first: without an explicit choice, use Hebrew regardless
   // of the browser language.
   const languagesToTry = language ? [language] : [DEFAULT_LANGUAGE];
@@ -95,8 +102,9 @@ export const setI18NextLanguage = (language: string | null) => {
     : 'ltr';
 
   if (resolved === i18n.language) {
-    return; // language is already set
+    // Already set, but its strings may still be loading (e.g. right after start).
+    return Promise.resolve(i18n.loadLanguages(resolved));
   }
 
-  void i18n.changeLanguage(resolved);
+  return Promise.resolve(i18n.changeLanguage(resolved)).then(() => undefined);
 };
