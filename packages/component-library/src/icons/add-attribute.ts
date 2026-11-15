@@ -30,7 +30,11 @@ const addJSXAttribute = ({ types: t, template }: PluginAPI, opts: Options) => {
     }
 
     if (typeof value === 'string' && literal) {
-      return t.jsxExpressionContainer(template.expression.ast(value));
+      // `template` is typed by @types/babel__template (Babel 7 types), `t` by
+      // Babel 8: same shape, different declarations.
+      return t.jsxExpressionContainer(
+        template.expression.ast(value) as unknown as BabelTypes.Expression,
+      );
     }
 
     if (typeof value === 'string') {

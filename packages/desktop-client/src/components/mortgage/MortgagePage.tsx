@@ -9,6 +9,10 @@ import { summarizeMix, validateMix } from '@actual-app/core/shared/mortgage';
 import { Page } from '#components/Page';
 
 import { AssumptionsPanel } from './AssumptionsPanel';
+import { BalanceChart } from './BalanceChart';
+import { CompareSection } from './CompareSection';
+import { DashboardSection } from './DashboardSection';
+import { ExportButtons } from './ExportButtons';
 import { MixToolbar } from './MixToolbar';
 import { ScheduleSection } from './ScheduleSection';
 import { SummaryCards } from './SummaryCards';
@@ -60,6 +64,20 @@ export function MortgagePage() {
 
         <View style={{ gap: 10 }}>
           <Text style={{ fontSize: 18, fontWeight: 600 }}>
+            <Trans>Affordability and payoff</Trans>
+          </Text>
+          <DashboardSection mix={mix} summary={summary} onChange={setMix} />
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 18, fontWeight: 600 }}>
+            <Trans>Balance and monthly payment over the years</Trans>
+          </Text>
+          <BalanceChart summary={summary} />
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 18, fontWeight: 600 }}>
             <Trans>Assumptions</Trans>
           </Text>
           <AssumptionsPanel
@@ -91,8 +109,16 @@ export function MortgagePage() {
 
         <View style={{ gap: 10 }}>
           <Text style={{ fontSize: 18, fontWeight: 600 }}>
+            <Trans>Compare mixes</Trans>
+          </Text>
+          <CompareSection mix={mix} saved={mixes.saved} />
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 18, fontWeight: 600 }}>
             <Trans>Amortization schedule</Trans>
           </Text>
+          <ExportButtons mix={mix} summary={summary} mixName={mixes.name} />
           <ScheduleSection mix={mix} summary={summary} />
         </View>
       </View>

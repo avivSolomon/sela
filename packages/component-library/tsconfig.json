@@ -7,6 +7,8 @@
     "declarationMap": true,
     "rootDir": "src",
     "strict": true,
+    // The icon generator scripts use Node's `path`.
+    "types": ["vite/client", "vitest/globals", "node"],
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },

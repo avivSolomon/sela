@@ -31,9 +31,6 @@ yarn start
 
 # Start with sync server
 yarn start:server-dev
-
-# Start desktop app development
-yarn start:desktop
 ```
 
 ### Important Rules
@@ -91,7 +88,7 @@ The core application logic that runs on any platform.
 
 #### 2. **desktop-client** (`packages/desktop-client/` - aliased as `@actual-app/web`)
 
-The React-based UI for web and desktop.
+The React-based UI (runs in the browser).
 
 - React components using functional programming patterns
 - E2E tests using Playwright
@@ -111,13 +108,6 @@ The React-based UI for web and desktop.
   # Visual regression tests
   yarn workspace @actual-app/web vrt
   ```
-
-#### 3. **desktop-electron** (`packages/desktop-electron/`)
-
-Electron wrapper for the desktop application.
-
-- Window management and native OS integration
-- E2E tests for Electron-specific features
 
 #### 4. **api** (`packages/api/` - aliased as `@actual-app/api`)
 
@@ -222,9 +212,6 @@ yarn workspace @actual-app/core run test
 ```bash
 # Run E2E tests for web
 yarn e2e
-
-# Desktop Electron E2E (includes full build)
-yarn e2e:desktop
 
 # Visual regression tests
 yarn vrt
@@ -421,9 +408,6 @@ yarn workspace @actual-app/web run playwright test accounts.test.ts --browser=ch
 # Browser build
 yarn build:browser
 
-# Desktop build
-yarn build:desktop
-
 # API build
 yarn build:api
 
@@ -558,7 +542,7 @@ yarn install:server
 
 - **Node.js**: >=22
 - **Yarn**: ^4.9.1 (managed by packageManager field)
-- **Browser Targets**: Electron >= 35.0, modern browsers (see browserslist)
+- **Browser Targets**: modern browsers (see browserslist)
 
 ## Migration Notes
 
@@ -606,3 +590,8 @@ When running the app for manual testing or demos, use **"View demo"** on the ini
 - Lage caches test results in `.lage/`. If tests behave unexpectedly, clear with `rm -rf .lage`.
 - Native modules (`better-sqlite3`, `bcrypt`) require build tools (`gcc`, `make`, `python3`). These are pre-installed in the Cloud VM.
 - All yarn commands must be run from the repository root, never from child workspaces.
+
+## Sela notes
+
+- Sela removed the Electron app, the mobile (Capacitor) app and Storybook; only the browser build is supported. `start-sela.ps1` builds once and serves the built app (`-Dev` for the Vite dev server).
+- The mortgage engine is in `packages/loot-core/src/shared/mortgage.ts` (tests next to it); the page is `packages/desktop-client/src/components/mortgage/`.

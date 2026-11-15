@@ -53,6 +53,10 @@ export type MortgageMix = {
   primeChanges: RateChange[];
   cpi: CpiAssumption;
   tracks: MortgageTrack[];
+  /** Household net income per month (₪), for the debt-to-income ratio. */
+  monthlyIncome?: number;
+  /** Month the first payment is made, "YYYY-MM", for the payoff date. */
+  startMonth?: string;
 };
 
 export type ScheduleRow = {
@@ -370,6 +374,8 @@ function sanitizeChanges(value: unknown): RateChange[] {
   return byMonth(out);
 }
 
+const START_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 /** Returns a well-formed mix, or null if the value is not a mortgage mix. */
 export function sanitizeMix(value: unknown): MortgageMix | null {
   if (!value || typeof value !== 'object') return null;
@@ -419,7 +425,15 @@ export function sanitizeMix(value: unknown): MortgageMix | null {
     ? rawCpi.monthlyPercent.map(v => num(v, NaN))
     : [];
 
+  const income = num(record.monthlyIncome, 0);
+  const startMonth =
+    typeof record.startMonth === 'string' && START_MONTH.test(record.startMonth)
+      ? record.startMonth
+      : undefined;
+
   return {
+    ...(income > 0 ? { monthlyIncome: income } : {}),
+    ...(startMonth ? { startMonth } : {}),
     prime: num(record.prime, 6),
     primeChanges: sanitizeChanges(record.primeChanges),
     cpi: {
@@ -460,4 +474,233 @@ export function parseSavedMixes(raw: unknown): SavedMortgageMix[] {
 
 export function serializeSavedMixes(mixes: SavedMortgageMix[]): string {
   return JSON.stringify(mixes);
+}
+
+// ---------------------------------------------------------------------------
+// CPI table import
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads monthly CPI changes (%) from the text of a CSV / pasted table.
+ *
+ * Every line holds one month, in order. The value is the last number on the
+ * line, so "0.3", "2024-01,0.3", "2024-01;0,3" and "ינואר 2024<TAB>-0.1" all
+ * work. A comma is read as a decimal separator only when the line has no
+ * other separator. Lines without a number (headers, blanks) are skipped.
+ */
+export function parseCpiTable(text: string): number[] {
+  const values: number[] = [];
+  for (const rawLine of text.replace(/^﻿/, '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line === '') continue;
+
+    let cells = line.split(/[;\t]/);
+    if (cells.length === 1) {
+      // "2024-01,0.3" -> comma separates the columns; "0,3" -> decimal comma
+      const commaCells = line.split(',');
+      // (a label such as a date with a 4-digit year, then a number)
+      cells =
+        commaCells.length === 2 &&
+        /^\s*-?\d+(\.\d+)?\s*%?\s*$/.test(commaCells[1]) &&
+        /\d{4}/.test(commaCells[0])
+          ? commaCells
+          : [line];
+    }
+    const last = cells[cells.length - 1]
+      .trim()
+      .replace(/%$/, '')
+      .replace(',', '.');
+    const value = Number(last);
+    if (last !== '' && Number.isFinite(value)) values.push(value);
+  }
+  return values;
+}
+
+// ---------------------------------------------------------------------------
+// Comparing mixes
+// ---------------------------------------------------------------------------
+
+export type ComparisonKey =
+  | 'firstMonthlyPayment'
+  | 'peakMonthlyPayment'
+  | 'totalInterest'
+  | 'totalIndexation'
+  | 'totalPaid'
+  | 'realCost';
+
+export type ComparisonRow = {
+  key: ComparisonKey;
+  a: number;
+  b: number;
+  /** b - a: negative means the second mix is cheaper. */
+  difference: number;
+};
+
+const COMPARISON_KEYS: ComparisonKey[] = [
+  'firstMonthlyPayment',
+  'peakMonthlyPayment',
+  'totalInterest',
+  'totalIndexation',
+  'totalPaid',
+  'realCost',
+];
+
+export function compareSummaries(
+  a: MixSummary,
+  b: MixSummary,
+): ComparisonRow[] {
+  return COMPARISON_KEYS.map(key => ({
+    key,
+    a: a[key],
+    b: b[key],
+    difference: b[key] - a[key],
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard: debt-to-income, real interest cost, payoff date
+// ---------------------------------------------------------------------------
+
+/** First monthly payment divided by the monthly income; null without income. */
+export function debtToIncome(
+  summary: Pick<MixSummary, 'firstMonthlyPayment'>,
+  monthlyIncome: number | undefined,
+): number | null {
+  if (!monthlyIncome || monthlyIncome <= 0) return null;
+  return summary.firstMonthlyPayment / monthlyIncome;
+}
+
+export type DtiBand = 'comfortable' | 'heavy' | 'risky';
+
+/**
+ * A rule-of-thumb reading of the ratio (an indication, not advice): up to
+ * 30% comfortable, up to 40% heavy, above that risky.
+ */
+export function dtiBand(ratio: number): DtiBand {
+  if (ratio <= 0.3) return 'comfortable';
+  if (ratio <= 0.4) return 'heavy';
+  return 'risky';
+}
+
+/** What borrowing really costs in today's money: real payments minus the loan. */
+export function realInterestCost(
+  summary: Pick<MixSummary, 'realCost' | 'totalPrincipal'>,
+): number {
+  return summary.realCost - summary.totalPrincipal;
+}
+
+/**
+ * Month of the last payment as "YYYY-MM" (the first payment is in
+ * `startMonth`), or null for an invalid start or an empty schedule.
+ */
+export function payoffMonth(
+  startMonth: string | undefined,
+  months: number,
+): string | null {
+  if (!startMonth || !START_MONTH.test(startMonth) || months <= 0) return null;
+  const [year, month] = startMonth.split('-').map(Number);
+  const index = year * 12 + (month - 1) + (months - 1);
+  const endYear = Math.floor(index / 12);
+  const endMonth = (index % 12) + 1;
+  return `${endYear}-${String(endMonth).padStart(2, '0')}`;
+}
+
+/** Number of months until the whole mix is paid off. */
+export function mixMonths(summary: Pick<MixSummary, 'schedules'>): number {
+  return summary.schedules.reduce((max, s) => Math.max(max, s.rows.length), 0);
+}
+
+// ---------------------------------------------------------------------------
+// Series and export
+// ---------------------------------------------------------------------------
+
+export type MonthlyPoint = {
+  month: number;
+  /** All tracks together. */
+  payment: number;
+  /** Outstanding principal after the payment, all tracks together. */
+  balance: number;
+};
+
+/** The whole mix, month by month (for charts and exports). */
+export function monthlySeries(summary: MixSummary): MonthlyPoint[] {
+  const longest = summary.schedules.reduce(
+    (max, s) => Math.max(max, s.rows.length),
+    0,
+  );
+  const points: MonthlyPoint[] = [];
+  for (let month = 1; month <= longest; month++) {
+    let payment = 0;
+    let balance = 0;
+    for (const schedule of summary.schedules) {
+      const row = schedule.rows[month - 1];
+      if (row) {
+        payment += row.payment;
+        balance += row.balance;
+      }
+    }
+    points.push({ month, payment, balance });
+  }
+  return points;
+}
+
+export type ScheduleCsvLabels = {
+  track: string;
+  month: string;
+  rate: string;
+  indexation: string;
+  payment: string;
+  interest: string;
+  principal: string;
+  balance: string;
+};
+
+function csvCell(value: string | number): string {
+  const text =
+    typeof value === 'number' ? String(Math.round(value * 100) / 100) : value;
+  // Neutralise spreadsheet formulas in names typed by the user
+  const safe =
+    /^[=+\-@\t\r]/.test(text) && typeof value === 'string' ? "'" + text : text;
+  return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe;
+}
+
+/** Every track's amortization schedule as CSV text (without a BOM). */
+export function scheduleToCsv(
+  mix: MortgageMix,
+  summary: MixSummary,
+  labels: ScheduleCsvLabels,
+): string {
+  const lines = [
+    [
+      labels.track,
+      labels.month,
+      labels.rate,
+      labels.indexation,
+      labels.payment,
+      labels.interest,
+      labels.principal,
+      labels.balance,
+    ]
+      .map(csvCell)
+      .join(','),
+  ];
+  mix.tracks.forEach((track, index) => {
+    for (const row of summary.schedules[index]?.rows ?? []) {
+      lines.push(
+        [
+          track.name,
+          row.period,
+          row.rate,
+          row.indexation,
+          row.payment,
+          row.interest,
+          row.principal,
+          row.balance,
+        ]
+          .map(csvCell)
+          .join(','),
+      );
+    }
+  });
+  return lines.join('\r\n') + '\r\n';
 }

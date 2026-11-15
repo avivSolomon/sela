@@ -7,6 +7,7 @@ import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import type { MortgageMix, RateChange } from '@actual-app/core/shared/mortgage';
 
+import { CpiImportButton } from './CpiImportButton';
 import { parseNumberList } from './format';
 import { LabeledField } from './LabeledField';
 import { NumberField } from './NumberField';
@@ -176,6 +177,12 @@ export function AssumptionsPanel({
                 color: theme.formInputText,
                 backgroundColor: theme.tableBackground,
                 border: '1px solid ' + theme.formInputBorder,
+              }}
+            />
+            <CpiImportButton
+              onImport={monthlyPercent => {
+                setCpiTableText(monthlyPercent.join(', '));
+                onChange({ ...mix, cpi: { ...mix.cpi, monthlyPercent } });
               }}
             />
           </View>

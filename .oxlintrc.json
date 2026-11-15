@@ -371,12 +371,6 @@
   },
   "overrides": [
     {
-      "files": ["packages/desktop-electron/**/*"],
-      "rules": {
-        "react/rules-of-hooks": "off"
-      }
-    },
-    {
       // Grandfathered pre-existing enums; new enums are disallowed everywhere else.
       "files": [
         "packages/component-library/src/tokens.ts",
@@ -444,7 +438,6 @@
       "files": [
         "packages/api/**/*",
         "packages/desktop-client/**/*",
-        "packages/desktop-electron/**/*",
         "packages/loot-core/**/*",
         "packages/plugins-service/**/*",
         "packages/sync-server/**/*"

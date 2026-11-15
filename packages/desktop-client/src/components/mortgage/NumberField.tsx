@@ -36,6 +36,9 @@ export function NumberField({
   return (
     <Input
       type="number"
+      // A number is always written left-to-right, so a minus sign stays in
+      // front ("-0.5") on this right-to-left page.
+      dir="ltr"
       aria-label={label}
       aria-invalid={invalid}
       step={step}
@@ -43,7 +46,7 @@ export function NumberField({
       value={text}
       style={{
         width,
-        textAlign: 'end',
+        textAlign: 'right',
         ...(invalid ? { borderColor: 'var(--color-errorBorder)' } : {}),
       }}
       onChangeValue={next => {

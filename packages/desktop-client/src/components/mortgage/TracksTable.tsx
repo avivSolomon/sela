@@ -2,6 +2,7 @@ import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
+import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
@@ -13,6 +14,7 @@ import type {
   ValidationIssue,
 } from '@actual-app/core/shared/mortgage';
 
+import { TrackCard } from './TrackCard';
 import { TrackRow } from './TrackRow';
 
 type TracksTableProps = {
@@ -38,6 +40,7 @@ export function TracksTable({
   onChange,
 }: TracksTableProps) {
   const { t } = useTranslation();
+  const { isNarrowWidth } = useResponsive();
 
   const updateTrack = (id: number, patch: Partial<MortgageTrack>) =>
     onChange({
@@ -66,59 +69,78 @@ export function TracksTable({
     });
   };
 
+  const removeTrack = (id: number) =>
+    onChange({ ...mix, tracks: mix.tracks.filter(track => track.id !== id) });
+
   return (
     <View style={{ gap: 10 }}>
-      <View
-        style={{
-          overflowX: 'auto',
-          border: '1px solid ' + theme.tableBorder,
-          borderRadius: 6,
-          backgroundColor: theme.tableBackground,
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={headerCell}>
-                <Trans>Track</Trans>
-              </th>
-              <th style={headerCell}>
-                <Trans>Type</Trans>
-              </th>
-              <th style={headerCell}>{t('Loan amount (₪)')}</th>
-              <th style={headerCell}>{t('Rate / margin (%)')}</th>
-              <th style={headerCell}>
-                <Trans>Years</Trans>
-              </th>
-              <th style={{ ...headerCell, textAlign: 'end' }}>
-                <Trans>Rate today</Trans>
-              </th>
-              <th style={{ ...headerCell, textAlign: 'end' }}>
-                <Trans>Monthly payment</Trans>
-              </th>
-              <th style={headerCell} />
-            </tr>
-          </thead>
-          <tbody>
-            {mix.tracks.map((track, index) => (
-              <TrackRow
-                key={track.id}
-                track={track}
-                issues={issues.filter(issue => issue.trackId === track.id)}
-                effectiveRate={effectiveAnnualRate(track, 1, mix)}
-                monthly={summary.schedules[index]?.monthly ?? 0}
-                onChange={patch => updateTrack(track.id, patch)}
-                onRemove={() =>
-                  onChange({
-                    ...mix,
-                    tracks: mix.tracks.filter(({ id }) => id !== track.id),
-                  })
-                }
-              />
-            ))}
-          </tbody>
-        </table>
-      </View>
+      {isNarrowWidth ? (
+        <View style={{ gap: 10 }}>
+          {mix.tracks.map((track, index) => (
+            <TrackCard
+              key={track.id}
+              track={track}
+              issues={issues.filter(issue => issue.trackId === track.id)}
+              effectiveRate={effectiveAnnualRate(track, 1, mix)}
+              monthly={summary.schedules[index]?.monthly ?? 0}
+              onChange={patch => updateTrack(track.id, patch)}
+              onRemove={() => removeTrack(track.id)}
+            />
+          ))}
+        </View>
+      ) : (
+        <View
+          style={{
+            overflowX: 'auto',
+            border: '1px solid ' + theme.tableBorder,
+            borderRadius: 6,
+            backgroundColor: theme.tableBackground,
+          }}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={headerCell}>
+                  <Trans>Track</Trans>
+                </th>
+                <th style={headerCell}>
+                  <Trans>Type</Trans>
+                </th>
+                <th style={headerCell}>{t('Loan amount (₪)')}</th>
+                <th style={headerCell}>{t('Rate / margin (%)')}</th>
+                <th style={headerCell}>
+                  <Trans>Years</Trans>
+                </th>
+                <th style={{ ...headerCell, textAlign: 'end' }}>
+                  <Trans>Rate today</Trans>
+                </th>
+                <th style={{ ...headerCell, textAlign: 'end' }}>
+                  <Trans>Monthly payment</Trans>
+                </th>
+                <th style={headerCell} />
+              </tr>
+            </thead>
+            <tbody>
+              {mix.tracks.map((track, index) => (
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  issues={issues.filter(issue => issue.trackId === track.id)}
+                  effectiveRate={effectiveAnnualRate(track, 1, mix)}
+                  monthly={summary.schedules[index]?.monthly ?? 0}
+                  onChange={patch => updateTrack(track.id, patch)}
+                  onRemove={() =>
+                    onChange({
+                      ...mix,
+                      tracks: mix.tracks.filter(({ id }) => id !== track.id),
+                    })
+                  }
+                />
+              ))}
+            </tbody>
+          </table>
+        </View>
+      )}
 
       <View style={{ alignItems: 'flex-start' }}>
         <Button variant="primary" onPress={addTrack}>
