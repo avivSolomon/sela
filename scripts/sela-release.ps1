@@ -64,7 +64,11 @@ if ($SkipChecks) {
 } else {
   Step 'Integrate checks (20-30 minutes)'
   powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'sela-check.ps1') Integrate *>> $log
-  if ($LASTEXITCODE -ne 0) { Fail "Integrate checks failed - see $log" }
+  $checksExit = $LASTEXITCODE
+  if ($checksExit -eq 1 -or ($checksExit -ne 0 -and $checksExit -ne 2)) { Fail "Integrate checks failed - see $log" }
+  if ($checksExit -eq 2) {
+    Write-Host 'Integrate: no new failures, but known failures (FAILED-KNOWN) - recorded in the summary.' -ForegroundColor Yellow
+  }
 }
 
 # 3. Source package
@@ -154,7 +158,7 @@ if (Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyCont
 Step 'summary'
 $lines = @(
   "Sela release - commit $commit - $date",
-  "Node v$actualNode; checks: $(if ($SkipChecks) { 'skipped (-SkipChecks)' } else { 'Integrate passed' }); smoke test: $smoke",
+  "Node v$actualNode; checks: $(if ($SkipChecks) { 'skipped (-SkipChecks)' } elseif ($checksExit -eq 2) { 'Integrate: no new failures; known failures only (FAILED-KNOWN, see release.log)' } else { 'Integrate passed' }); smoke test: $smoke",
   ''
 )
 foreach ($zip in $sourceZip, $prodZip) {

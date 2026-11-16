@@ -89,6 +89,9 @@ $needsBuild = $Rebuild -or -not (Test-Path (Join-Path $buildDir 'index.html')) -
 
 if ($needsBuild) {
   Write-Host "Building Sela (a few minutes, only when the code changed)..." -ForegroundColor Cyan
+  # Remove the old stamp first: if this build fails half way, the next start
+  # must build again even if the code is changed back to the old version.
+  Remove-Item $stamp -ErrorAction SilentlyContinue
   # No source maps, size report or bundle stats: they only slow a local build.
   $env:SELA_LOCAL_BUILD = '1'
   $env:VITE_CONFIG_NATIVE_IGNORE_WARNING = 'true'

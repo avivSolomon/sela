@@ -15,6 +15,11 @@
 #              files only (never in the whole repository).
 #   -Base      compare with this commit instead of the last commit (HEAD),
 #              e.g. -Base main to check everything on the branch.
+#   -Workers   parallel test workers (default: 2 on a computer with 8GB or less).
+#
+# Exit code: 0 all passed; 1 at least one new failure; 2 no new failures, but
+# some steps failed only with known failures (shown as FAILED-KNOWN, with the
+# real test counts - a known failure is never reported as a pass).
 #
 # Changed files = files that differ from HEAD (or -Base) plus new files that
 # git does not ignore. Steps run one after another, never in parallel, to keep
@@ -24,7 +29,10 @@ param(
   [ValidateSet('Fast', 'Validate', 'Integrate')]
   [string]$Track,
   [switch]$Fix,
-  [string]$Base = 'HEAD'
+  [string]$Base = 'HEAD',
+  # Parallel test workers. -1 (default): 2 on a computer with 8GB of memory
+  # or less, otherwise the tools' own default; 0: the tools' own default.
+  [int]$Workers = -1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,24 +47,41 @@ $yarn = Join-Path $root '.yarn\releases\yarn-4.17.1.cjs'
 $results = [System.Collections.Generic.List[object]]::new()
 $started = Get-Date
 
+# Memory: on a small computer, fewer parallel test workers keep it usable and
+# avoid swapping (which makes everything slower, not faster).
+$os = Get-CimInstance Win32_OperatingSystem
+$totalGB = [Math]::Round($os.TotalVisibleMemorySize / 1MB, 1)
+$freeGB = [Math]::Round($os.FreePhysicalMemory / 1MB, 1)
+if ($Workers -lt 0) { $Workers = $(if ($totalGB -le 8.5) { 2 } else { 0 }) }
+Write-Host "Memory: $freeGB GB free of $totalGB GB; test workers: $(if ($Workers -gt 0) { $Workers } else { 'default' })" -ForegroundColor DarkGray
+if ($Track -eq 'Integrate' -and $freeGB -lt 1.5) {
+  Write-Host "Less than 1.5 GB free: close the development server, browsers and other heavy programs for a faster, more reliable run." -ForegroundColor Yellow
+}
+
+# Step results: "passed", "FAILED" (a new failure) or "FAILED-KNOWN" (the
+# only failures are known ones). A known failure is still a failure: it is
+# shown as failed, with the real test counts, and gives its own exit code.
+$KnownExitCode = 2
 function Invoke-Step([string]$Name, [scriptblock]$Body) {
   Write-Host ""
   Write-Host "== $Name" -ForegroundColor Cyan
   $t0 = Get-Date
   $script:stepNote = ''
+  $script:knownOnly = $false
   & $Body
-  $ok = ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE)
+  $code = $LASTEXITCODE
   $secs = [int]((Get-Date) - $t0).TotalSeconds
-  $result = $(if ($ok) { 'passed' } else { 'FAILED' })
-  if ($script:stepNote) { $result += " ($script:stepNote)" }
-  $results.Add([pscustomobject]@{ Step = $Name; Result = $result; Seconds = $secs })
+  # FAILED-KNOWN only when Invoke-Vitest proved that every failure is a known
+  # one - never from an exit code alone (some tools exit with 2 on errors).
+  $result = $(if ($code -eq 0 -or $null -eq $code) { 'passed' } elseif ($script:knownOnly) { 'FAILED-KNOWN' } else { 'FAILED' })
+  $results.Add([pscustomobject]@{ Step = $Name; Result = $result; Seconds = $secs; Note = $script:stepNote })
   $global:LASTEXITCODE = 0
 }
 
 # Two core tests fail on Windows only: the test cannot delete a budget file
-# that SQLite still holds open (EBUSY). They pass on Linux. A run whose only
-# failures are these (with EBUSY in the output) counts as passed, with a note;
-# any other failure fails the step.
+# that SQLite still holds open (EBUSY). They pass on Linux. When these are the
+# only failures (and EBUSY is in the output) the step is FAILED-KNOWN, not
+# passed; any other failure makes it FAILED.
 $knownWindowsFailures = @(
   'src/server/main.test.ts > Budgets > budget is successfully loaded',
   'src/server/main.test.ts > Budgets > budget detects out of sync migrations'
@@ -64,6 +89,7 @@ $knownWindowsFailures = @(
 function Invoke-Vitest([string]$Workspace, [string]$EnvName, [string[]]$VitestArgs) {
   $old = $env:ENV
   if ($EnvName) { $env:ENV = $EnvName }
+  if ($Workers -gt 0) { $VitestArgs = @($VitestArgs) + "--maxWorkers=$Workers" }
   # Vitest writes part of its report to stderr; capture both (Continue: in
   # Windows PowerShell, stderr lines would otherwise stop the script).
   $ErrorActionPreference = 'Continue'
@@ -71,15 +97,20 @@ function Invoke-Vitest([string]$Workspace, [string]$EnvName, [string[]]$VitestAr
     node $yarn workspace $Workspace exec vitest @VitestArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable lines | Write-Host
     $code = $LASTEXITCODE
   } finally { $env:ENV = $old }
+  # The real counts, as Vitest reports them, e.g. "2 failed | 1140 passed | 2 skipped (1144)".
+  $counts = @($lines | ForEach-Object { if ($_ -match '^\s*Tests\s+(.+)$') { $Matches[1].Trim() } }) | Select-Object -Last 1
+  if ($counts) { $script:stepNote = "tests: $counts" }
   if ($code -ne 0) {
     $failed = @($lines | ForEach-Object { if ($_ -match '^\s*FAIL\s+(.+?)\s*$') { $Matches[1] } } | Sort-Object -Unique)
     $unknown = @($failed | Where-Object { $knownWindowsFailures -notcontains $_ })
     if ($failed.Count -gt 0 -and $unknown.Count -eq 0 -and ($lines -match 'EBUSY')) {
-      $script:stepNote = "$($failed.Count) known Windows failure(s): EBUSY in main.test.ts"
-      $code = 0
-    } elseif ($unknown.Count -gt 0) {
-      Write-Host "New failures (not the known Windows ones):" -ForegroundColor Red
-      $unknown | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+      $script:stepNote += "; all $($failed.Count) failure(s) are known (Windows EBUSY in main.test.ts)"
+      $script:knownOnly = $true
+    } else {
+      if ($unknown.Count -gt 0) {
+        Write-Host "New failures (not the known Windows ones):" -ForegroundColor Red
+        $unknown | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+      }
     }
   }
   $global:LASTEXITCODE = $code
@@ -110,7 +141,7 @@ function Restore-TestLeftovers([string[]]$DirtyBefore, [bool]$BudgetExisted) {
 }
 
 function Skip-Step([string]$Name, [string]$Why) {
-  $results.Add([pscustomobject]@{ Step = $Name; Result = "skipped ($Why)"; Seconds = 0 })
+  $results.Add([pscustomobject]@{ Step = $Name; Result = 'skipped'; Seconds = 0; Note = $Why })
 }
 
 function Get-ChangedFiles {
@@ -237,8 +268,9 @@ switch ($Track) {
       Invoke-Step 'end-to-end: mortgage (Chrome, against the build)' {
         $env:E2E_START_URL = 'http://localhost:3001'
         $env:E2E_CHANNEL = 'chrome'
+        if ($Workers -gt 0) { $env:E2E_WORKERS = [string][Math]::Max(1, [Math]::Floor($Workers / 2)) }
         try { node $yarn workspace '@actual-app/web' exec playwright test e2e/mortgage.test.ts --reporter=list }
-        finally { $env:E2E_START_URL = $null; $env:E2E_CHANNEL = $null }
+        finally { $env:E2E_START_URL = $null; $env:E2E_CHANNEL = $null; $env:E2E_WORKERS = $null }
       }
       $pidFile = Join-Path $env:TEMP 'sela-check-server.pid'
       if (Test-Path $pidFile) {
@@ -253,8 +285,17 @@ switch ($Track) {
 
 Write-Host ""
 Write-Host "== Summary: track $Track, $([int]((Get-Date) - $started).TotalSeconds) s" -ForegroundColor Cyan
-$results | Format-Table -AutoSize | Out-String | Write-Host
-$failed = @($results | Where-Object { $_.Result -eq 'FAILED' }).Count
-if ($failed -gt 0) { Write-Host "$failed step(s) failed." -ForegroundColor Red; exit 1 }
+$results | Format-Table Step, Result, Seconds, Note -AutoSize -Wrap | Out-String -Width 220 | Write-Host
+$newFailures = @($results | Where-Object { $_.Result -eq 'FAILED' }).Count
+$knownFailures = @($results | Where-Object { $_.Result -eq 'FAILED-KNOWN' }).Count
+# Exit codes: 0 all passed, 1 at least one new failure, 2 only known failures.
+if ($newFailures -gt 0) {
+  Write-Host "$newFailures step(s) FAILED with new failures$(if ($knownFailures) { "; $knownFailures more with known failures only" })." -ForegroundColor Red
+  exit 1
+}
+if ($knownFailures -gt 0) {
+  Write-Host "No new failures, but $knownFailures step(s) FAILED with known failures only (see Note). This is not a pass." -ForegroundColor Yellow
+  exit $KnownExitCode
+}
 Write-Host 'All steps passed.' -ForegroundColor Green
 exit 0
