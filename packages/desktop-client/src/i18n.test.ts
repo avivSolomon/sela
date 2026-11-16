@@ -34,8 +34,7 @@ describe('setI18NextLanguage', () => {
   test('should default to Hebrew when no language is provided', () => {
     vi.stubGlobal('navigator', { language: 'uk' });
 
-
-    setI18NextLanguage('');
+    void setI18NextLanguage('');
 
     expect(vi.mocked(i18n).changeLanguage).toHaveBeenCalledWith('he');
   });
@@ -43,7 +42,7 @@ describe('setI18NextLanguage', () => {
   test('should set the provided language if it is available', () => {
     const language = availableLanguages[0];
 
-    setI18NextLanguage(language);
+    void setI18NextLanguage(language);
 
     expect(vi.mocked(i18n).changeLanguage).toHaveBeenCalledWith(language);
   });
@@ -51,7 +50,7 @@ describe('setI18NextLanguage', () => {
   test('should fallback to English if the provided language is unavailable', () => {
     vi.spyOn(console, 'info');
 
-    setI18NextLanguage('unknown');
+    void setI18NextLanguage('unknown');
 
     expect(console.info).toHaveBeenCalledWith(
       'Unknown locale unknown, falling back to en',
@@ -62,7 +61,7 @@ describe('setI18NextLanguage', () => {
   test('should successfully use a language with a region code if it is known', () => {
     const language = 'pt-BR';
 
-    setI18NextLanguage(language);
+    void setI18NextLanguage(language);
 
     expect(vi.mocked(i18n).changeLanguage).toHaveBeenCalledWith(language);
   });
@@ -70,7 +69,7 @@ describe('setI18NextLanguage', () => {
   test('should fallback to base language if the provided language has an unknown region code', () => {
     vi.spyOn(console, 'info');
 
-    setI18NextLanguage('uk-ZZ');
+    void setI18NextLanguage('uk-ZZ');
 
     expect(console.info).toHaveBeenCalledWith(
       'Unknown locale uk-ZZ, falling back to uk-zz',
@@ -81,7 +80,7 @@ describe('setI18NextLanguage', () => {
   test('should fallback to lowercase language if the provided language has uppercase letters', () => {
     vi.spyOn(console, 'info');
 
-    setI18NextLanguage('EN');
+    void setI18NextLanguage('EN');
 
     expect(console.info).toHaveBeenCalledWith(
       'Unknown locale EN, falling back to en',

@@ -50,6 +50,11 @@ export const loadPrefs = createAppAsyncThunk(
       send('preferences/get'),
     ]);
 
+    // We need to load translations before the app renders: setPrefs below
+    // lets the budget screens render, and `<Trans>` texts do not re-render
+    // when the language changes later.
+    await setI18NextLanguage(globalPrefs.language ?? '');
+
     dispatch(
       setPrefs({ local: prefs, global: globalPrefs, synced: syncedPrefs }),
     );
@@ -61,9 +66,6 @@ export const loadPrefs = createAppAsyncThunk(
         hideFraction: syncedPrefs.hideFraction,
       }),
     );
-
-    // We need to load translations before the app renders
-    setI18NextLanguage(globalPrefs.language ?? '');
 
     return prefs;
   },
