@@ -17,6 +17,9 @@ export default defineConfig({
     userAgent: 'playwright',
     screenshot: 'only-on-failure',
     browserName: 'chromium',
+    // E2E_CHANNEL=chrome (or msedge) uses the installed browser instead of
+    // Playwright's downloaded Chromium.
+    channel: process.env.E2E_CHANNEL || undefined,
     baseURL: process.env.E2E_START_URL ?? `http://localhost:${e2ePort}`,
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,

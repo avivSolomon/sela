@@ -595,3 +595,4 @@ When running the app for manual testing or demos, use **"View demo"** on the ini
 
 - Sela removed the Electron app, the mobile (Capacitor) app and Storybook; only the browser build is supported. `start-sela.ps1` builds once and serves the built app (`-Dev` for the Vite dev server).
 - The mortgage engine is in `packages/loot-core/src/shared/mortgage.ts` (tests next to it); the page is `packages/desktop-client/src/components/mortgage/`.
+- Checks by work track: `scripts/sela-check.ps1 Fast` (related unit tests), `Validate` (before a commit: format/lint of changed files, typecheck, related tests, translations), `Integrate` (before a merge: everything, build and mortgage e2e). Release: `scripts/sela-release.ps1 -OutDir <new folder>`. `start-sela.ps1` rebuilds only when the content of build inputs changes (`scripts/build-stamp.ps1`).
