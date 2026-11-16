@@ -3,7 +3,7 @@ name: Test
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   merge_group:
 
@@ -12,11 +12,11 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   setup:
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -29,7 +29,7 @@ jobs:
           download-translations: 'false'
   constraints:
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -44,7 +44,7 @@ jobs:
         run: yarn check:tsconfig-references
   lint:
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -57,7 +57,7 @@ jobs:
         run: yarn lint
   knip:
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -72,7 +72,7 @@ jobs:
         run: yarn knip
   typecheck:
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -83,9 +83,11 @@ jobs:
           download-translations: 'false'
       - name: Typecheck
         run: yarn typecheck
-  validate-cli:
+  build-web:
+    # Sela ships only the browser app, so CI builds that (instead of the sync
+    # server and its CLI, which Sela does not use).
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -94,16 +96,17 @@ jobs:
         uses: ./.github/actions/setup
         with:
           download-translations: 'false'
-      - name: Build Web
-        run: yarn build:server
-      - name: Check that the built CLI works
-        run: node packages/sync-server/build/bin/actual-server.js --version
+      - name: Build plugins service
+        run: yarn workspace plugins-service build
+      - name: Build web app
+        run: yarn workspace @actual-app/web build:browser
+      - name: Check the build output
+        run: test -s packages/desktop-client/build/index.html
   test:
     needs: setup
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Authenticate to Depot via GitHub OIDC for test reporting
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -114,15 +117,13 @@ jobs:
           download-translations: 'false'
       - name: Test
         run: yarn test
-      - name: Report test results to Depot
-        uses: depot/test-report-action@2ad5779840a9c63e884fa26f11d019768a27a941 # v1.0.1
-        if: ${{ !cancelled() && github.event_name == 'push' }}
-        with:
-          path: |
-            bin/test-results/junit*.xml
-            packages/*/test-results/junit*.xml
+      # Passed / failed / skipped per test suite, and suites with no report
+      # (not run), in the job summary - a failure is never shown as a pass.
+      - name: Test results summary
+        if: ${{ !cancelled() }}
+        run: node .github/scripts/junit-summary.mjs
   check-gh-actions:
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     permissions:
       security-events: write
     steps:
@@ -134,13 +135,13 @@ jobs:
   migrations:
     needs: setup
     if: github.event_name == 'pull_request'
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           # Full history so the migration check can diff against the merge
-          # base with master; blobless to keep the large repo checkout fast
+          # base with the base branch; blobless to keep the large repo checkout fast
           # (ls-tree and merge-base only need commits and trees)
           fetch-depth: 0
           filter: blob:none
@@ -149,6 +150,8 @@ jobs:
         with:
           download-translations: 'false'
       - name: Check migrations
+        env:
+          MIGRATIONS_BASE_BRANCH: ${{ github.base_ref }}
         run: yarn workspace @actual-app/ci-actions tsx bin/check-migrations.ts
       - name: Save PR number for the warnings comment workflow
         if: always() && hashFiles('packages/ci-actions/migration-warnings.json') != ''
