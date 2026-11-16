@@ -61,11 +61,16 @@ function readMigrations(ref: string) {
   return migrations;
 }
 
-git(['fetch', 'origin', 'master']);
+// The branch to compare with: MIGRATIONS_BASE_BRANCH (the workflow passes the
+// pull request's base branch, e.g. "main" in Sela), "master" by default.
+const baseBranch = process.env.MIGRATIONS_BASE_BRANCH || 'master';
+const baseRef = `origin/${baseBranch}`;
 
-const mergeBase = git(['merge-base', 'origin/master', 'HEAD']).trim();
+git(['fetch', 'origin', baseBranch]);
 
-const masterMigrations = readMigrations('origin/master');
+const mergeBase = git(['merge-base', baseRef, 'HEAD']).trim();
+
+const masterMigrations = readMigrations(baseRef);
 const mergeBaseMigrations = readMigrations(mergeBase);
 const headMigrations = readMigrations('HEAD');
 
