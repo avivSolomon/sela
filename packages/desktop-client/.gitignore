@@ -31,9 +31,10 @@ public/data
 public/data-file-index.txt
 public/*.wasm
 
-# translations
-locale/*
-!locale/he.json
+# translations: he.json (and any other language) is tracked; en.json is
+# generated from the source by "i18next" before every build and dev start
+locale/en.json
+locale/*_old.json
 
 # service worker build output
 dev-dist
