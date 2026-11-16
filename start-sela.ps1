@@ -78,17 +78,12 @@ if ($Dev) {
 $buildDir = Join-Path $PSScriptRoot 'packages\desktop-client\build'
 $stamp    = Join-Path $buildDir '.sela-build-stamp'
 
-# The stamp changes when the commit or the working tree changes, so a build is
-# repeated only after "git pull" or local edits (or with -Rebuild).
-$currentStamp = 'no-git'
-if (Get-Command git -ErrorAction SilentlyContinue) {
-  $head = (git rev-parse HEAD 2>$null)
-  $dirty = (git status --porcelain 2>$null | Out-String)
-  if ($head) {
-    $bytes = [Text.Encoding]::UTF8.GetBytes("$head|$dirty")
-    $currentStamp = [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash($bytes)).Replace('-', '')
-  }
-}
+# The stamp is a fingerprint of the content of the files the build uses
+# (scripts\build-stamp.ps1): any code change - including saving an already
+# changed file again - causes a build; changes to tests, docs or Markdown do
+# not. -Rebuild always builds.
+$currentStamp = & (Join-Path $PSScriptRoot 'scripts\build-stamp.ps1')
+if (-not $currentStamp) { $currentStamp = 'no-git' }
 $builtStamp = if (Test-Path $stamp) { (Get-Content $stamp -Raw).Trim() } else { '' }
 $needsBuild = $Rebuild -or -not (Test-Path (Join-Path $buildDir 'index.html')) -or ($currentStamp -eq 'no-git' -and -not $builtStamp) -or ($currentStamp -ne 'no-git' -and $builtStamp -ne $currentStamp)
 
@@ -102,6 +97,8 @@ if ($needsBuild) {
   node $yarn workspace '@actual-app/web' build:browser
   if ($LASTEXITCODE -ne 0) { Write-Host "Build failed (web app). Try again with -Dev to see the error." -ForegroundColor Red; exit 1 }
   Set-Content -Path $stamp -Value $currentStamp -Encoding ascii
+} else {
+  Write-Host "No code changes since the last build - using it (use -Rebuild to force a build)." -ForegroundColor DarkGray
 }
 
 Write-Host "Starting Sela..." -ForegroundColor Green
