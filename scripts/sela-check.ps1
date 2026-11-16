@@ -145,7 +145,17 @@ function Skip-Step([string]$Name, [string]$Why) {
 }
 
 function Get-ChangedFiles {
+  # A wrong -Base must fail, not look like "nothing changed".
+  git rev-parse --verify --quiet "$Base^{commit}" *> $null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Unknown commit or branch for -Base: '$Base'." -ForegroundColor Red
+    exit 1
+  }
   $tracked = @(git -c core.quotepath=off diff --name-only --diff-filter=d $Base --)
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "git diff failed - cannot tell what changed." -ForegroundColor Red
+    exit 1
+  }
   $new = @(git -c core.quotepath=off ls-files --others --exclude-standard)
   @($tracked + $new | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Sort-Object -Unique)
 }
