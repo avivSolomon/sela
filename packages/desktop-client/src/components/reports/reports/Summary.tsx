@@ -31,6 +31,7 @@ import { Checkbox } from '#components/forms';
 import { MobileBackButton } from '#components/mobile/MobileBackButton';
 import { MobilePageHeader, Page, PageHeader } from '#components/Page';
 import { PrivacyFilter } from '#components/PrivacyFilter';
+import { displayWidgetName } from '#components/reports/defaultReportNames';
 import { Header } from '#components/reports/Header';
 import { LoadingIndicator } from '#components/reports/LoadingIndicator';
 import { calculateTimeRange } from '#components/reports/reportRanges';
@@ -227,11 +228,15 @@ function SummaryInner({ widget }: SummaryInnerProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isNarrowWidth } = useResponsive();
-  const title = widget?.meta?.name || t('Summary');
+  const title = displayWidgetName(widget?.meta?.name, t) || t('Summary');
 
   const updateDashboardWidgetMutation = useUpdateDashboardWidgetMutation();
 
   const onSaveWidgetName = async (newName: string) => {
+    // Unchanged (also a translated default name): keep the stored name.
+    if (newName === title) {
+      return;
+    }
     if (!widget) {
       dispatch(
         addNotification({

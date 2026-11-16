@@ -37,6 +37,7 @@ import { TransactionList as TransactionListMobile } from '#components/mobile/tra
 import { MobilePageHeader, Page, PageHeader } from '#components/Page';
 import { PrivacyFilter } from '#components/PrivacyFilter';
 import { DateRange } from '#components/reports/DateRange';
+import { displayWidgetName } from '#components/reports/defaultReportNames';
 import { CalendarGraph } from '#components/reports/graphs/CalendarGraph';
 import { Header } from '#components/reports/Header';
 import { LoadingIndicator } from '#components/reports/LoadingIndicator';
@@ -319,12 +320,16 @@ function CalendarInner({ widget, parameters }: CalendarInnerProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isNarrowWidth } = useResponsive();
-  const title = widget?.meta?.name || t('Calendar');
+  const title = displayWidgetName(widget?.meta?.name, t) || t('Calendar');
   const table = useRef<TableHandleRef<TransactionEntity>>(null);
   const dateFormat = useDateFormat();
   const updateDashboardWidgetMutation = useUpdateDashboardWidgetMutation();
 
   const onSaveWidgetName = async (newName: string) => {
+    // Unchanged (also a translated default name): keep the stored name.
+    if (newName === title) {
+      return;
+    }
     if (!widget) {
       throw new Error('No widget that could be saved.');
     }

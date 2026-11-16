@@ -2823,5 +2823,15 @@
   "YTD": "מתחילת השנה",
   "Yuan Renminbi": "יואן רנמינבי",
   "yyyy": "yyyy",
-  "Zero amount": "סכום אפס"
+  "Zero amount": "סכום אפס",
+  "Total Income (YTD)": "סך ההכנסות (מתחילת השנה)",
+  "Total Expenses (YTD)": "סך ההוצאות (מתחילת השנה)",
+  "Avg Per Month": "ממוצע לחודש",
+  "Avg Per Transaction": "ממוצע לתנועה",
+  "This Month": "החודש",
+  "Budget Overview": "סקירת תקציב",
+  "3-Month Average": "ממוצע 3 חודשים",
+  "Transaction Calendar": "לוח תנועות",
+  "Recent Net Worth Change": "שינוי אחרון בהון העצמי",
+  "Main": "ראשי"
 }
