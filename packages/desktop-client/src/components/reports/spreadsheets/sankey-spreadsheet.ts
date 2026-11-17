@@ -120,6 +120,8 @@ type TooltipInfoMap = Map<
   Map<NodeKey, Array<{ name: string; value: number }>>
 >;
 
+// A constant and a type with the same name, on purpose (TypeScript pattern).
+// oxlint-disable-next-line no-redeclare
 const SpecialNodeKeys = {
   ToBudget: 'to_budget',
   Budgeted: 'budgeted',
@@ -134,6 +136,8 @@ const SpecialNodeKeys = {
 } as const;
 type SpecialNodeKeys = (typeof SpecialNodeKeys)[keyof typeof SpecialNodeKeys];
 
+// A constant and a type with the same name, on purpose (TypeScript pattern).
+// oxlint-disable-next-line no-redeclare
 export const GraphLayers = {
   IncomePayee: 'payee',
   IncomeCategory: 'income_category',
@@ -1204,7 +1208,7 @@ function groupOtherCategories(
     );
   }
 
-  Object.entries(GraphLayers).forEach(([_, layer]) => {
+  Object.values(GraphLayers).forEach(layer => {
     let ordinaryNodes = nodesInLayer(graph, layer).filter(isGroupableNode);
     let otherNodes = nodesInLayer(graph, layer).filter(s =>
       s.endsWith(SpecialNodeKeys.OtherSuffix),

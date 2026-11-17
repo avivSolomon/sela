@@ -3,9 +3,13 @@
 // JUnit reports Vitest writes in CI. A suite without a report is listed as
 // "not run". Failures are always shown as failures; this script only reports
 // and never changes the job result (the test step does that).
+//
+// Usage: node junit-summary.mjs [sela|upstream|all]   (default: all)
+//   sela      the packages of the app (required "Sela checks")
+//   upstream  Actual packages that Sela does not use ("Upstream checks")
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 
-const suites = [
+const selaSuites = [
   [
     'web app (desktop-client)',
     'packages/desktop-client/test-results/junit.xml',
@@ -14,6 +18,8 @@ const suites = [
   ['core (web)', 'packages/loot-core/test-results/junit-web.xml'],
   ['components', 'packages/component-library/test-results/junit-web.xml'],
   ['crdt', 'packages/crdt/test-results/junit.xml'],
+];
+const upstreamSuites = [
   ['api', 'packages/api/test-results/junit.xml'],
   ['sync-server', 'packages/sync-server/test-results/junit.xml'],
   ['ci-actions', 'packages/ci-actions/test-results/junit.xml'],
@@ -22,6 +28,13 @@ const suites = [
     'packages/eslint-plugin-actual/test-results/junit.xml',
   ],
 ];
+const group = process.argv[2] || 'all';
+const suites =
+  group === 'sela'
+    ? selaSuites
+    : group === 'upstream'
+      ? upstreamSuites
+      : [...selaSuites, ...upstreamSuites];
 
 function count(xml) {
   let passed = 0;
@@ -64,7 +77,7 @@ for (const [name, file] of suites) {
 }
 
 const out = [
-  '## Unit test results',
+  `## Unit test results (${group === 'sela' ? 'Sela app packages' : group === 'upstream' ? 'upstream packages Sela does not use' : 'all packages'})`,
   '',
   '| Suite | Passed | Failed | Skipped | Status |',
   '| --- | ---: | ---: | ---: | --- |',
@@ -74,7 +87,9 @@ const out = [
     ? `### Failed tests (${allFailures.length})\n\n${allFailures.slice(0, 50).join('\n')}`
     : 'No failed tests.',
   '',
-  'Not run in CI: end-to-end (Playwright) and visual regression tests.',
+  group === 'upstream'
+    ? 'Not run in this workflow: end-to-end and visual regression tests.'
+    : 'End-to-end: the mortgage tests run in the e2e-mortgage job of "Sela checks". Not run in CI: the other end-to-end tests and visual regression tests.',
   '',
 ].join('\n');
 

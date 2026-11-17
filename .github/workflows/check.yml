@@ -1,4 +1,10 @@
-name: Test
+name: Upstream checks (not required)
+
+# Checks of the whole repository, including Actual packages that Sela does
+# not use (sync-server, api, cli, ci-actions, eslint-plugin-actual) and code
+# that was left over when Sela removed upstream features. Known failures here
+# stay visible as failures; they are not part of the required "Sela checks"
+# workflow (sela.yml), which covers the app that Sela ships.
 
 on:
   push:
@@ -27,21 +33,6 @@ jobs:
         uses: ./.github/actions/setup
         with:
           download-translations: 'false'
-  constraints:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Set up environment
-        uses: ./.github/actions/setup
-        with:
-          download-translations: 'false'
-      - name: Check dependency version consistency
-        run: yarn constraints
-      - name: Check tsconfig project references are in sync
-        run: yarn check:tsconfig-references
   lint:
     needs: setup
     runs-on: ubuntu-latest
@@ -53,7 +44,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           download-translations: 'false'
-      - name: Lint
+      - name: Lint (whole repository)
         run: yarn lint
   knip:
     needs: setup
@@ -81,27 +72,8 @@ jobs:
         uses: ./.github/actions/setup
         with:
           download-translations: 'false'
-      - name: Typecheck
+      - name: Typecheck (all packages)
         run: yarn typecheck
-  build-web:
-    # Sela ships only the browser app, so CI builds that (instead of the sync
-    # server and its CLI, which Sela does not use).
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Set up environment
-        uses: ./.github/actions/setup
-        with:
-          download-translations: 'false'
-      - name: Build plugins service
-        run: yarn workspace plugins-service build
-      - name: Build web app
-        run: yarn workspace @actual-app/web build:browser
-      - name: Check the build output
-        run: test -s packages/desktop-client/build/index.html
   test:
     needs: setup
     runs-on: ubuntu-latest
@@ -115,57 +87,21 @@ jobs:
         uses: ./.github/actions/setup
         with:
           download-translations: 'false'
-      - name: Test
-        run: yarn test
-      # Passed / failed / skipped per test suite, and suites with no report
-      # (not run), in the job summary - a failure is never shown as a pass.
+      # The app's own packages are tested in sela.yml; these are the others.
+      - name: Unit tests - api
+        run: yarn workspace @actual-app/api run test
+      - name: Unit tests - sync-server
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/sync-server run test
+      - name: Unit tests - cli
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/cli run test
+      - name: Unit tests - ci-actions
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/ci-actions run test
+      - name: Unit tests - eslint-plugin-actual
+        if: ${{ !cancelled() }}
+        run: yarn workspace eslint-plugin-actual run test
       - name: Test results summary
         if: ${{ !cancelled() }}
-        run: node .github/scripts/junit-summary.mjs
-  check-gh-actions:
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
-
-  migrations:
-    needs: setup
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          # Full history so the migration check can diff against the merge
-          # base with the base branch; blobless to keep the large repo checkout fast
-          # (ls-tree and merge-base only need commits and trees)
-          fetch-depth: 0
-          filter: blob:none
-      - name: Set up environment
-        uses: ./.github/actions/setup
-        with:
-          download-translations: 'false'
-      - name: Check migrations
-        env:
-          MIGRATIONS_BASE_BRANCH: ${{ github.base_ref }}
-        run: yarn workspace @actual-app/ci-actions tsx bin/check-migrations.ts
-      - name: Save PR number for the warnings comment workflow
-        if: always() && hashFiles('packages/ci-actions/migration-warnings.json') != ''
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: echo "$PR_NUMBER" > packages/ci-actions/migration-warnings-pr.txt
-      # Consumed by migration-warnings-comment.yml, which posts the advisory
-      # warnings as a PR comment (this job's token is read-only on fork PRs,
-      # so it can't comment itself).
-      - name: Upload warnings for the comment workflow
-        if: always() && hashFiles('packages/ci-actions/migration-warnings.json') != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: migration-warnings
-          path: |
-            packages/ci-actions/migration-warnings.json
-            packages/ci-actions/migration-warnings-pr.txt
+        run: node .github/scripts/junit-summary.mjs upstream
