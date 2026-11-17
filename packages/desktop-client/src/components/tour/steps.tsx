@@ -88,8 +88,8 @@ function getBudgetTourSteps({ navigate, budgetType }: TourStepDeps): Step[] {
           </Trans>
         ) : (
           <Trans>
-            Categories in {{ appName: 'סלע' }} work like virtual envelopes:
-            you assign the money you already have to them, then spend from each
+            Categories in {{ appName: 'סלע' }} work like virtual envelopes: you
+            assign the money you already have to them, then spend from each
             envelope. This approach is called{' '}
             <Link
               variant="external"
@@ -182,8 +182,8 @@ function getBudgetTourSteps({ navigate, budgetType }: TourStepDeps): Step[] {
       content: (
         <Trans>
           Transactions live in accounts, so adding your first account is the
-          best way to get started with {{ appName: 'סלע' }}. Click here to
-          add one. You can enter transactions yourself, or{' '}
+          best way to get started with {{ appName: 'סלע' }}. Click here to add
+          one. You can enter transactions yourself, or{' '}
           <Link
             variant="external"
             to="https://actualbudget.org/docs/advanced/bank-sync"

@@ -4,6 +4,17 @@
   transition: none;
 }
 
+// react-grid-layout places each widget with translate(x, y) measured from the
+// left edge of the grid. In a right-to-left page an absolutely positioned
+// widget without `left` starts at the right edge, so the translation pushed
+// every widget past the right edge (under the sidebar). Anchoring widgets to
+// the left keeps the library's coordinates; the widgets' content still follows
+// the page direction. Only the reports dashboard grid is affected.
+.reports-dashboard-grid > .react-grid-item {
+  left: 0;
+  right: auto;
+}
+
 .react-grid-item:hover {
   z-index: 1;
 }

@@ -83,7 +83,9 @@ test.describe('Mortgage calculator', () => {
     });
 
     await expect(page.getByText('יובאו 3 חודשי מדד.')).toBeVisible();
-    await expect(page.getByLabel('טבלת מדד', { exact: true })).toHaveValue('0.3, 0.1, -0.2');
+    await expect(page.getByLabel('טבלת מדד', { exact: true })).toHaveValue(
+      '0.3, 0.1, -0.2',
+    );
   });
 
   test('compares the current mix with a saved one', async ({ page }) => {
