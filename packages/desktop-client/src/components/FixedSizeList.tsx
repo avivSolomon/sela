@@ -469,6 +469,9 @@ export class FixedSizeList extends PureComponent<
     return style;
   };
 
+  // The arguments are the cache key (memoizeOne compares them), so they are
+  // declared even though the function does not read them.
+  // oxlint-disable-next-line no-unused-vars
   _getItemStyleCache = memoizeOne((_, __, ___) => ({}));
 
   _getRangeToRender() {
