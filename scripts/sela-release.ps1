@@ -76,8 +76,12 @@ if ($SkipChecks) {
   Write-Host 'Integrate checks skipped (-SkipChecks).' -ForegroundColor Yellow
 } else {
   Step 'Integrate checks (20-30 minutes)'
+  # Native tools write warnings to stderr; in Windows PowerShell that is an
+  # error record, so 'Stop' would end the script. Judge by the exit code.
+  $ErrorActionPreference = 'Continue'
   powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'sela-check.ps1') Integrate *>> $log
   $checksExit = $LASTEXITCODE
+  $ErrorActionPreference = 'Stop'
   if ($checksExit -eq 1 -or ($checksExit -ne 0 -and $checksExit -ne 2)) { Fail "Integrate checks failed - see $log" }
   if ($checksExit -eq 2) {
     Write-Host 'Integrate: no new failures, but known failures (FAILED-KNOWN) - recorded in the summary.' -ForegroundColor Yellow
@@ -95,6 +99,10 @@ Step 'clean install and build (several minutes)'
 Expand-Archive $sourceZip $work
 $src = Join-Path $work 'sela'
 Push-Location $src
+# Install and build write warnings to stderr (e.g. Vite); in Windows
+# PowerShell those become error records, which 'Stop' would turn into a
+# failure. Each step is judged by its exit code instead.
+$ErrorActionPreference = 'Continue'
 try {
   $yarn = Join-Path $src '.yarn\releases\yarn-4.17.1.cjs'
   # Packages come from this computer's yarn cache when present (no download).
@@ -114,6 +122,7 @@ try {
   $buildSecs = [int]((Get-Date) - $t0).TotalSeconds
   Write-Host "install $installSecs s, build $buildSecs s"
 } finally {
+  $ErrorActionPreference = 'Stop'
   Pop-Location
 }
 
