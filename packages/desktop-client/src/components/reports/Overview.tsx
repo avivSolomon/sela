@@ -765,6 +765,7 @@ export function Overview({ dashboard }: OverviewProps) {
           >
             {isMounted && (
               <ReactGridLayout
+                className="reports-dashboard-grid"
                 width={containerWidth}
                 layout={currentLayout}
                 gridConfig={{
