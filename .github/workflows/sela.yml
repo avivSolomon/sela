@@ -1,0 +1,196 @@
+name: Sela checks
+
+# The required checks for Sela: the packages that make up the browser app
+# (desktop-client, loot-core, component-library, crdt, plugins-service), its
+# data and migrations, its dependencies and the mortgage end-to-end tests.
+# Checks of Actual packages that Sela does not use run in check.yml
+# ("Upstream checks"), which is informational. Nothing here is allowed to
+# fail silently: there is no continue-on-error.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+
+  dependencies:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Check dependency version consistency
+        run: yarn constraints
+      - name: Check tsconfig project references are in sync
+        run: yarn check:tsconfig-references
+
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Format check (app packages, scripts and workflows)
+        run: >-
+          yarn oxfmt --check
+          packages/desktop-client packages/loot-core packages/component-library
+          packages/crdt packages/plugins-service scripts .github
+      # The icon generator files (component-library/src/icons) are templates
+      # for @svgr/cli, which needs default exports; they are not app code.
+      - name: Lint (app packages)
+        run: >-
+          yarn oxlint --type-aware --quiet
+          --ignore-pattern 'packages/component-library/src/icons/**'
+          packages/desktop-client packages/loot-core packages/component-library
+          packages/crdt packages/plugins-service
+
+  typecheck:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Typecheck web app (with core, components, crdt, plugins-service)
+        run: yarn workspace @actual-app/web run typecheck
+      - name: Typecheck core (strict files)
+        run: yarn workspace @actual-app/core run typecheck
+      - name: Typecheck plugins-service (strict files)
+        run: yarn workspace plugins-service run typecheck
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      # Each suite runs even if an earlier one failed, so every result is
+      # reported; the job fails if any of them failed.
+      - name: Unit tests - web app (interface)
+        id: web
+        run: yarn workspace @actual-app/web run test
+      - name: Unit tests - core (calculations, data, budget, mortgage engine)
+        id: core
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/core run test
+      - name: Unit tests - components
+        id: components
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/components run test
+      - name: Unit tests - crdt (sync data)
+        id: crdt
+        if: ${{ !cancelled() }}
+        run: yarn workspace @actual-app/crdt run test
+      - name: Test results summary
+        if: ${{ !cancelled() }}
+        run: node .github/scripts/junit-summary.mjs sela
+
+  build-web:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Build plugins service
+        run: yarn workspace plugins-service build
+      - name: Build web app
+        run: yarn workspace @actual-app/web build:browser
+      - name: Check the build output
+        run: test -s packages/desktop-client/build/index.html
+
+  e2e-mortgage:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Build plugins service
+        run: yarn workspace plugins-service build
+      - name: Build web app
+        run: yarn workspace @actual-app/web build:browser
+      - name: Install the Playwright browser
+        run: yarn workspace @actual-app/web exec playwright install --with-deps chromium
+      - name: Mortgage end-to-end tests (against the build)
+        env:
+          E2E_USE_BUILD: '1'
+        run: yarn workspace @actual-app/web exec playwright test e2e/mortgage.test.ts --reporter=list
+
+  migrations:
+    needs: setup
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          # Full history so the migration check can diff against the merge
+          # base with the base branch; blobless to keep the checkout fast
+          fetch-depth: 0
+          filter: blob:none
+      - name: Set up environment
+        uses: ./.github/actions/setup
+        with:
+          download-translations: 'false'
+      - name: Check migrations
+        env:
+          MIGRATIONS_BASE_BRANCH: ${{ github.base_ref }}
+        run: yarn workspace @actual-app/ci-actions tsx bin/check-migrations.ts
+
+  check-gh-actions:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
