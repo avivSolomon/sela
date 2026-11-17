@@ -9,6 +9,11 @@
 #                end-to-end tests) when it already passed for this commit.
 #   -Node        folder with the Node.js version from .nvmrc (node.exe), if the
 #                installed Node is a different version.
+#   -WorkRoot    where the temporary build folder is created (default
+#                C:\sela-release-work). It must be short: some files of the
+#                repository have long paths and Windows limits a full path to
+#                260 characters, so a folder under the user profile (TEMP) is
+#                too long for extraction and the install.
 #
 # Steps:
 #   1. The working tree must be clean: the packages hold exactly one commit.
@@ -24,7 +29,8 @@
 param(
   [Parameter(Mandatory = $true)][string]$OutDir,
   [switch]$SkipChecks,
-  [string]$Node
+  [string]$Node,
+  [string]$WorkRoot = (Join-Path $env:SystemDrive 'sela-release-work')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,11 +58,18 @@ $OutDir = [IO.Path]::GetFullPath($OutDir)
 if ((Test-Path $OutDir) -and (Get-ChildItem $OutDir -Force | Select-Object -First 1)) {
   Fail "$OutDir is not empty. Use a new folder: existing packages are never overwritten."
 }
+$work = Join-Path ([IO.Path]::GetFullPath($WorkRoot)) "$short-$(Get-Date -Format yyyyMMddHHmmss)"
+# Windows path limit (260 characters, unless long paths are enabled): check
+# the longest file of the commit inside the work folder before starting.
+$longest = (git ls-tree -r --name-only $commit | Measure-Object -Property Length -Maximum).Maximum
+$needed = (Join-Path $work 'sela').Length + 1 + $longest
+if ($needed -ge 260) {
+  Fail "The work folder is too long: the longest file would have a $needed-character path (limit 260). Use a shorter -WorkRoot, e.g. C:\sr."
+}
 New-Item -ItemType Directory -Force $OutDir | Out-Null
-$work = Join-Path ([IO.Path]::GetTempPath()) "sela-release-$short-$(Get-Date -Format yyyyMMddHHmmss)"
-New-Item -ItemType Directory $work | Out-Null
+New-Item -ItemType Directory -Force $work | Out-Null
 $log = Join-Path $OutDir 'release.log'
-Write-Host "work folder $work, log $log"
+Write-Host "work folder $work (longest path $needed of 260), log $log"
 
 # 2. Checks
 if ($SkipChecks) {
