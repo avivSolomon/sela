@@ -29,6 +29,7 @@ import { FilterButton } from '#components/filters/FiltersMenu';
 import { MobileBackButton } from '#components/mobile/MobileBackButton';
 import { MobilePageHeader, Page, PageHeader } from '#components/Page';
 import { PrivacyFilter } from '#components/PrivacyFilter';
+import { displayWidgetName } from '#components/reports/defaultReportNames';
 import { SpendingGraph } from '#components/reports/graphs/SpendingGraph';
 import { LegendItem } from '#components/reports/LegendItem';
 import { LoadingIndicator } from '#components/reports/LoadingIndicator';
@@ -246,8 +247,13 @@ function SpendingInternal({ widget }: SpendingInternalProps) {
     }
   };
 
-  const title = widget?.meta?.name || t('Monthly Spending');
+  const title =
+    displayWidgetName(widget?.meta?.name, t) || t('Monthly Spending');
   const onSaveWidgetName = async (newName: string) => {
+    // Unchanged (also a translated default name): keep the stored name.
+    if (newName === title) {
+      return;
+    }
     if (!widget) {
       throw new Error('No widget that could be saved.');
     }

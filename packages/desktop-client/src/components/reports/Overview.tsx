@@ -53,6 +53,7 @@ import { NON_DRAGGABLE_AREA_CLASS_NAME } from './constants';
 import { DashboardHeader } from './DashboardHeader';
 import './overview.scss';
 import { DashboardSelector } from './DashboardSelector';
+import { displayDashboardName } from './defaultReportNames';
 import { LoadingIndicator } from './LoadingIndicator';
 import { AgeOfMoneyCard } from './reports/AgeOfMoneyCard';
 import { BalanceForecastCard } from './reports/BalanceForecastCard';
@@ -486,7 +487,8 @@ export function Overview({ dashboard }: OverviewProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <Trans>Reports</Trans>: {dashboard.name}
+                  <Trans>Reports</Trans>:{' '}
+                  {displayDashboardName(dashboard.name, t)}
                 </View>
               }
             />
