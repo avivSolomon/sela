@@ -87,7 +87,9 @@ const out = [
     ? `### Failed tests (${allFailures.length})\n\n${allFailures.slice(0, 50).join('\n')}`
     : 'No failed tests.',
   '',
-  'Not run in CI: end-to-end (Playwright) and visual regression tests.',
+  group === 'upstream'
+    ? 'Not run in this workflow: end-to-end and visual regression tests.'
+    : 'End-to-end: the mortgage tests run in the e2e-mortgage job of "Sela checks". Not run in CI: the other end-to-end tests and visual regression tests.',
   '',
 ].join('\n');
 
